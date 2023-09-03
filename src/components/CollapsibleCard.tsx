@@ -1,7 +1,8 @@
 'use client'
 import React, { useState } from 'react';
-import Card from 'react-bootstrap/Card';
+import { Card } from 'react-bootstrap';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { toast } from 'react-toastify';
 import {
   faChevronDown,
   faChevronUp,
@@ -10,7 +11,7 @@ import {
   faTrash,
   faEdit
 } from '@fortawesome/free-solid-svg-icons';
-import { useUsers } from '@/store/hackers';
+import AlertModal from './ModelAlert';
 
 interface UserDetails {
   id: number;
@@ -22,7 +23,7 @@ interface UserDetails {
   picture: string;
   country: string;
   description: string;
-  age?: number;
+  age?: string;
 }
 
 interface CollapsibleCardProps {
@@ -39,15 +40,21 @@ const CollapsibleCard: React.FC<CollapsibleCardProps> = ({ userDetails }) => {
   const [editMode, setEditMode] = useState<boolean[]>(
     editedData.map(() => false)
   );
+  const [isSaveEnable, setSaveEnable] = useState<boolean>(true);
+  const [isDeleteOption, setIsDeleteOption] = useState<boolean>(false);
 
   const toggleCollapse = (index: number) => {
-    const newCollapsedStates = collapsedStates.map((state, i) =>
-      i === index ? !state : true
-    );
-    setCollapsedStates(newCollapsedStates);
+    if (editMode.includes(true)) {
+      toast.error('Forbidden Action!');
+    } else {
+      const newCollapsedStates = collapsedStates.map((state, i) =>
+        i === index ? !state : true
+      );
+      setCollapsedStates(newCollapsedStates);
 
-    if (editMode[index]) {
-      toggleEditMode(index, false);
+      if (editMode[index]) {
+        toggleEditMode(index, false);
+      }
     }
   };
 
@@ -57,7 +64,6 @@ const CollapsibleCard: React.FC<CollapsibleCardProps> = ({ userDetails }) => {
     );
     setEditMode(newEditMode);
 
-    // If The Input Is Not A Save Button
     if (!isSave && !newEditMode[index]) {
       setEditedData((prevData) => {
         const newData = [...prevData];
@@ -72,9 +78,13 @@ const CollapsibleCard: React.FC<CollapsibleCardProps> = ({ userDetails }) => {
     index: number
   ) => {
     const { name, value } = event.target;
+    if (name === 'age') {
+      console.log('age:: ', value)
+      console.log('age:: ', typeof value);
+    }
+    setSaveEnable(false);
     setEditedData((prevData) => {
       const newData = [...prevData];
-      // Check if the input field is for 'age'
       newData[index] = { ...newData[index], [name]: value };
       return newData;
     });
@@ -84,6 +94,7 @@ const CollapsibleCard: React.FC<CollapsibleCardProps> = ({ userDetails }) => {
     event: React.ChangeEvent<HTMLSelectElement>,
     index: number
   ) => {
+    setSaveEnable(false);
     const { value } = event.target;
     setEditedData((prevData) => {
       const newData = [...prevData];
@@ -93,24 +104,38 @@ const CollapsibleCard: React.FC<CollapsibleCardProps> = ({ userDetails }) => {
   };
 
   const handleSaveChanges = (index: number) => {
-    // Save changes (you can update your data here)
-    // For now, we'll just switch back to view mode
-    toggleEditMode(index, true);
+    let countryRezx = /^\D+$/;
+    if (!countryRezx.test(editedData[index].country)) {
+      toast.error(`Country Cannot Have Number In It's Name And Cannot Be Empty`)
+    } else if (editedData[index].description === "") {
+      toast.error(`Description Cannot Be Empty`)
+    } else if (typeof editedData[index].age === 'string' && editedData[index].age === '') {
+      toast.error(`Age Cannot Be Empty`)
+    } else {
+      toggleEditMode(index, true);
+    }
   };
 
   const handleDiscardChanges = (index: number) => {
-    // Discard changes and switch back to view mode
     toggleEditMode(index, false);
   };
 
-  const handleDelete = (index: number) => {
-    // Delete the user
+  const handleYes = (id: number) => {
+    console.log(`Yes clicked for id: ${id}`);
     setEditedData((prevData) => {
       const newData = [...prevData];
-      newData.splice(index, 1);
-      console.log(newData)
+      newData.splice(id, 1);
+      userDetails.splice(id, 1);
       return newData;
     });
+  }
+
+  const handleClose = () => {
+    setIsDeleteOption(false);
+  };
+
+  const handleDelete = (index: number) => {
+    setIsDeleteOption(true);
   }
 
   return (
@@ -128,7 +153,7 @@ const CollapsibleCard: React.FC<CollapsibleCardProps> = ({ userDetails }) => {
                 alt={users.first + ' ' + users.last}
                 style={{ borderRadius: '50%', marginRight: '16px' }}
               />
-              <h1>{users.first + ' ' + users.last}</h1>
+              <h2>{users.first + ' ' + users.last}</h2>
               <FontAwesomeIcon
                 icon={collapsedStates[index] ? faChevronDown : faChevronUp}
                 size="2x"
@@ -230,42 +255,59 @@ const CollapsibleCard: React.FC<CollapsibleCardProps> = ({ userDetails }) => {
                   }}
                 >
                   {editMode[index] ? (
-                    <>
-                      <button>
+                    <div>
+                      <button
+                        disabled={isSaveEnable}
+                        className="btn btn-outline-success border-0 mr-2"
+                        style={{ cursor: isSaveEnable ? 'not-allowed' : 'pointer' }}
+                      >
                         <FontAwesomeIcon
                           icon={faSave}
                           size="2x"
-                          style={{ cursor: 'pointer', marginRight: '8px' }}
                           onClick={() => handleSaveChanges(index)}
                         />
                       </button>
-                      <button>
+                      <button
+                        className="btn btn-outline-danger border-0"
+                      >
                         <FontAwesomeIcon
                           icon={faTimes}
                           size="2x"
-                          style={{ cursor: 'pointer' }}
                           onClick={() => handleDiscardChanges(index)}
                         />
                       </button>
-                    </>
+                    </div>
                   ) : (
                     <>
-                      <button>
+                      <button
+                        className="btn btn-outline-danger border-0 mr-2"
+                        style={{ cursor: 'pointer' }}
+                      >
                         <FontAwesomeIcon
                           icon={faTrash}
                           size="2x"
-                          style={{ cursor: 'pointer', marginRight: '8px' }}
                           onClick={() => handleDelete(index)}
                         />
                       </button>
-                      <button disabled={users.age < 18}>
+                      <button
+                        className="btn btn-outline-info border-0"
+                        disabled={users.age < 18}
+                        style={{ cursor: (users.age < 18) ? 'not-allowed' : 'pointer' }}
+                      >
                         <FontAwesomeIcon
                           icon={faEdit}
                           size="2x"
-                          style={{ cursor: 'pointer' }}
                           onClick={() => toggleEditMode(index, false)}
                         />
                       </button>
+                      <AlertModal
+                        id={index}
+                        show={isDeleteOption}
+                        title={'Are You Sure?'}
+                        msg={`Clicking Yes will delete all the details of ${users.first + ' ' + users.last}`}
+                        onClose={handleClose}
+                        onYes={handleYes}
+                      />
                     </>
                   )}
                 </div>
