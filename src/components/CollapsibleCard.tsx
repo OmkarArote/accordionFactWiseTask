@@ -134,7 +134,7 @@ const CollapsibleCard: React.FC<CollapsibleCardProps> = ({ userDetails }) => {
     setIsDeleteOption(false);
   };
 
-  const handleDelete = (index: number) => {
+  const handleDelete = () => {
     setIsDeleteOption(true);
   }
 
