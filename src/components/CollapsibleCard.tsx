@@ -10,6 +10,7 @@ import {
   faTrash,
   faEdit
 } from '@fortawesome/free-solid-svg-icons';
+import { useUsers } from '@/store/hackers';
 
 interface UserDetails {
   id: number;
@@ -21,6 +22,7 @@ interface UserDetails {
   picture: string;
   country: string;
   description: string;
+  age?: number;
 }
 
 interface CollapsibleCardProps {
@@ -28,14 +30,14 @@ interface CollapsibleCardProps {
 }
 
 const CollapsibleCard: React.FC<CollapsibleCardProps> = ({ userDetails }) => {
-  const [collapsedStates, setCollapsedStates] = useState<boolean[]>(
-    userDetails.map(() => true)
-  );
-  const [editMode, setEditMode] = useState<boolean[]>(
-    userDetails.map(() => false)
-  );
   const [editedData, setEditedData] = useState<UserDetails[]>(
     userDetails.map((user) => ({ ...user }))
+  );
+  const [collapsedStates, setCollapsedStates] = useState<boolean[]>(
+    editedData.map(() => true)
+  );
+  const [editMode, setEditMode] = useState<boolean[]>(
+    editedData.map(() => false)
   );
 
   const toggleCollapse = (index: number) => {
@@ -44,24 +46,22 @@ const CollapsibleCard: React.FC<CollapsibleCardProps> = ({ userDetails }) => {
     );
     setCollapsedStates(newCollapsedStates);
 
-    // Discard changes if collapsing while in edit mode
     if (editMode[index]) {
-      toggleEditMode(index);
+      toggleEditMode(index, false);
     }
   };
 
-  const toggleEditMode = (index: number) => {
+  const toggleEditMode = (index: number, isSave: boolean) => {
     const newEditMode = editMode.map((mode, i) =>
       i === index ? !mode : mode
     );
-    // console.log('newEditMode:: ', newEditMode[index]);
     setEditMode(newEditMode);
 
-    // Discard changes if switching to view mode
-    if (!newEditMode[index]) {
+    // If The Input Is Not A Save Button
+    if (!isSave && !newEditMode[index]) {
       setEditedData((prevData) => {
         const newData = [...prevData];
-        newData[index] = { ...userDetails[index] };
+        newData[index] = { ...editedData[index] };
         return newData;
       });
     }
@@ -74,8 +74,8 @@ const CollapsibleCard: React.FC<CollapsibleCardProps> = ({ userDetails }) => {
     const { name, value } = event.target;
     setEditedData((prevData) => {
       const newData = [...prevData];
+      // Check if the input field is for 'age'
       newData[index] = { ...newData[index], [name]: value };
-      console.log('newData[index]:: ',newData[index]);
       return newData;
     });
   };
@@ -93,19 +93,29 @@ const CollapsibleCard: React.FC<CollapsibleCardProps> = ({ userDetails }) => {
   };
 
   const handleSaveChanges = (index: number) => {
-    // Update your data here with the edited data
+    // Save changes (you can update your data here)
     // For now, we'll just switch back to view mode
-    toggleEditMode(index);
+    toggleEditMode(index, true);
   };
 
   const handleDiscardChanges = (index: number) => {
     // Discard changes and switch back to view mode
-    toggleEditMode(index);
+    toggleEditMode(index, false);
   };
+
+  const handleDelete = (index: number) => {
+    // Delete the user
+    setEditedData((prevData) => {
+      const newData = [...prevData];
+      newData.splice(index, 1);
+      console.log(newData)
+      return newData;
+    });
+  }
 
   return (
     <div className="container">
-      {userDetails.map((users, index) => (
+      {editedData.map((users, index) => (
         <Card key={users.id}>
           <Card.Body>
             <div
@@ -118,7 +128,7 @@ const CollapsibleCard: React.FC<CollapsibleCardProps> = ({ userDetails }) => {
                 alt={users.first + ' ' + users.last}
                 style={{ borderRadius: '50%', marginRight: '16px' }}
               />
-              <h2>{users.first + ' ' + users.last}</h2>
+              <h1>{users.first + ' ' + users.last}</h1>
               <FontAwesomeIcon
                 icon={collapsedStates[index] ? faChevronDown : faChevronUp}
                 size="2x"
@@ -131,19 +141,21 @@ const CollapsibleCard: React.FC<CollapsibleCardProps> = ({ userDetails }) => {
                   <div className="col-md-4">
                     <h4 className="text-muted">Age</h4>
                     {editMode[index] ? (
-                      <input
-                        type="number"
-                        name="age"
-                        value={editedData[index].dob}
-                        style={{
-                          border: '1px solid #ccc',
-                          borderRadius: '5px',
-                          padding: '4px',
-                        }}
-                        onChange={(e) => handleInputChange(e, index)}
-                      />
+                      <>
+                        <input
+                          type="number"
+                          name="age"
+                          value={users.age}
+                          style={{
+                            border: '1px solid #ccc',
+                            borderRadius: '5px',
+                            padding: '4px',
+                          }}
+                          onChange={(e) => handleInputChange(e, index)}
+                        /><span> Years</span>
+                      </>
                     ) : (
-                      <p>{editedData[index].dob}</p>
+                      <p>{users.age} Years</p>
                     )}
                   </div>
                   <div className="col-md-4">
@@ -151,7 +163,7 @@ const CollapsibleCard: React.FC<CollapsibleCardProps> = ({ userDetails }) => {
                     {editMode[index] ? (
                       <select
                         name="gender"
-                        value={editedData[index].gender}
+                        value={users.gender}
                         onChange={(e) => handleGenderChange(e, index)}
                         style={{
                           border: '1px solid #ccc',
@@ -159,12 +171,15 @@ const CollapsibleCard: React.FC<CollapsibleCardProps> = ({ userDetails }) => {
                           padding: '4px',
                         }}
                       >
+                        {/* Male | Female | Transgender | Rather not say | Other */}
                         <option value="Male">Male</option>
                         <option value="Female">Female</option>
+                        <option value="Transgender">Transgender</option>
+                        <option value="Rather Not Say">Rather Not Say</option>
                         <option value="Other">Other</option>
                       </select>
                     ) : (
-                      <p>{editedData[index].gender}</p>
+                      <p>{users.gender}</p>
                     )}
                   </div>
                   <div className="col-md-4">
@@ -173,7 +188,7 @@ const CollapsibleCard: React.FC<CollapsibleCardProps> = ({ userDetails }) => {
                       <input
                         type="text"
                         name="country"
-                        value={editedData[index].country}
+                        value={users.country}
                         onChange={(e) => handleInputChange(e, index)}
                         style={{
                           border: '1px solid #ccc',
@@ -182,15 +197,15 @@ const CollapsibleCard: React.FC<CollapsibleCardProps> = ({ userDetails }) => {
                         }}
                       />
                     ) : (
-                      <p>{editedData[index].country}</p>
+                      <p>{users.country}</p>
                     )}
                   </div>
                   <div className="col-md-12">
-                    <h4 className="text-muted">Description</h4>
+                    <h4 className="text-muted mt-2">Description</h4>
                     {editMode[index] ? (
                       <textarea
                         name="description"
-                        value={editedData[index].description}
+                        value={users.description}
                         onChange={(e) => handleInputChange(e, index)}
                         style={{
                           border: '1px solid #ccc',
@@ -203,7 +218,7 @@ const CollapsibleCard: React.FC<CollapsibleCardProps> = ({ userDetails }) => {
                         }}
                       />
                     ) : (
-                      <p>{editedData[index].description}</p>
+                      <p>{users.description}</p>
                     )}
                   </div>
                 </div>
@@ -216,32 +231,41 @@ const CollapsibleCard: React.FC<CollapsibleCardProps> = ({ userDetails }) => {
                 >
                   {editMode[index] ? (
                     <>
-                      <FontAwesomeIcon
-                        icon={faSave}
-                        size="2x"
-                        style={{ cursor: 'pointer', marginRight: '8px' }}
-                        onClick={() => handleSaveChanges(index)}
-                      />
-                      <FontAwesomeIcon
-                        icon={faTimes}
-                        size="2x"
-                        style={{ cursor: 'pointer' }}
-                        onClick={() => handleDiscardChanges(index)}
-                      />
+                      <button>
+                        <FontAwesomeIcon
+                          icon={faSave}
+                          size="2x"
+                          style={{ cursor: 'pointer', marginRight: '8px' }}
+                          onClick={() => handleSaveChanges(index)}
+                        />
+                      </button>
+                      <button>
+                        <FontAwesomeIcon
+                          icon={faTimes}
+                          size="2x"
+                          style={{ cursor: 'pointer' }}
+                          onClick={() => handleDiscardChanges(index)}
+                        />
+                      </button>
                     </>
                   ) : (
                     <>
-                      <FontAwesomeIcon
-                        icon={faTrash}
-                        size="2x"
-                        style={{ cursor: 'pointer', marginRight: '8px' }}
-                      />
-                      <FontAwesomeIcon
-                        icon={faEdit}
-                        size="2x"
-                        style={{ cursor: 'pointer' }}
-                        onClick={() => toggleEditMode(index)}
-                      />
+                      <button>
+                        <FontAwesomeIcon
+                          icon={faTrash}
+                          size="2x"
+                          style={{ cursor: 'pointer', marginRight: '8px' }}
+                          onClick={() => handleDelete(index)}
+                        />
+                      </button>
+                      <button disabled={users.age < 18}>
+                        <FontAwesomeIcon
+                          icon={faEdit}
+                          size="2x"
+                          style={{ cursor: 'pointer' }}
+                          onClick={() => toggleEditMode(index, false)}
+                        />
+                      </button>
                     </>
                   )}
                 </div>

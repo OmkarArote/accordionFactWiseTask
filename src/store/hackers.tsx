@@ -2,7 +2,7 @@
 import { ReactNode, createContext, useContext, useState } from "react";
 import UsersDetailsFormJson from '../data/celebrities.json';
 
-console.log('UsersDetailsFormJson:: ',UsersDetailsFormJson);
+console.log('UsersDetailsFormJson:: ', UsersDetailsFormJson);
 
 export type UserDetailsType = {
   id: number;
@@ -17,13 +17,18 @@ export type UserDetailsType = {
 }
 
 export type UserDetailsContext = {
-    userDetails: UserDetailsType;
+  userDetails: UserDetailsType;
 }
 
 export const userContext = createContext<UserDetailsContext | null>(null)
 
 export const UserProvider = ({ children }: { children: ReactNode }) => {
-  const [userDetails, setUserDetails] = useState<UserDetailsType[]>(UsersDetailsFormJson);
+  const updatedUserDetails = UsersDetailsFormJson.map((user) => {
+    const dob = new Date(user.dob);
+    const age = new Date().getFullYear() - dob.getFullYear();
+    return { ...user, age };
+  });
+  const [userDetails, setUserDetails] = useState<UserDetailsType[]>(updatedUserDetails);
   return (
     <userContext.Provider value={{ userDetails }}>
       {children}
